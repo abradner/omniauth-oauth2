@@ -77,6 +77,37 @@ describe OmniAuth::Strategies::OAuth2 do
       expect(instance).to receive(:fail!).with('user_denied', anything)
       instance.callback_phase
     end
+
+    it 'should accept callback params from the request via params[] hash' do
+
+      # Fake having a session.
+      # Can't use the ActionController:TestCase methods in this context
+      OmniAuth::Strategies::OAuth2.class_eval %Q"
+                                        def session=(var)
+                                          @session = var
+                                        end
+                                        def session
+                                          @session
+                                        end
+                                        "
+
+      instance = subject.new('abc', 'def')
+      allow(instance).to receive(:request) do
+        double('Request', :params => {'code' => '4/def', 'state' => 'abc'})
+      end
+
+      instance.session = {'omniauth.state' => 'abc'}
+
+      expect(instance).to receive(:build_access_token)
+      instance.callback_phase
+    end
+
+    it 'should accept callback params as arguments, not just from the request' do
+      instance = subject.new('abc', 'def')
+
+      expect(instance).to receive(:build_access_token)
+      instance.callback_phase(:code => '4/def', :state => 'abc')
+    end
   end
 end
 
