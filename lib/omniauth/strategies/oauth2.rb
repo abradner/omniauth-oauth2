@@ -65,14 +65,26 @@ module OmniAuth
         options.token_params.merge(options_for('token'))
       end
 
-      def callback_phase # rubocop:disable AbcSize, CyclomaticComplexity, MethodLength, PerceivedComplexity
-        error = request.params['error_reason'] || request.params['error']
+      def callback_phase(request_options = {}) # rubocop:disable AbcSize, CyclomaticComplexity, MethodLength, PerceivedComplexity
+
+        unless request.nil? or request.params.blank?
+          request_options = {
+              :code => request.params['code'],
+              :state => request.params['state'],
+              :error => request.params['error'],
+              :error_reason => request.params['error_reason'],
+              :error_description => request.params['error_description'],
+              :error_uri => request.params['error_uri']
+          }.merge(request_options)
+        end
+
+        error = request_options[:error_reason] || request_options[:error]
         if error
-          fail!(error, CallbackError.new(request.params['error'], request.params['error_description'] || request.params['error_reason'], request.params['error_uri']))
-        elsif !options.provider_ignores_state && (request.params['state'].to_s.empty? || request.params['state'] != session.delete('omniauth.state'))
+          fail!(error, CallbackError.new(request_options[:error], request_options[:error_description] || request_options[:error_reason], request_options[:error_uri]))
+        elsif !options.provider_ignores_state && (request_options[:state].to_s.empty? || request_options[:state] != session.delete('omniauth.state'))
           fail!(:csrf_detected, CallbackError.new(:csrf_detected, 'CSRF detected'))
         else
-          self.access_token = build_access_token
+          self.access_token = build_access_token request_options[:code]
           self.access_token = access_token.refresh! if access_token.expired?
           super
         end
@@ -88,8 +100,8 @@ module OmniAuth
 
     protected
 
-      def build_access_token
-        verifier = request.params['code']
+      def build_access_token(code)
+        verifier = code
         client.auth_code.get_token(verifier, {:redirect_uri => callback_url}.merge(token_params.to_hash(:symbolize_keys => true)), deep_symbolize(options.auth_token_params))
       end
 
