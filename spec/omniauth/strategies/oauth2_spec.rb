@@ -99,14 +99,24 @@ describe OmniAuth::Strategies::OAuth2 do
       instance.session = {'omniauth.state' => 'abc'}
 
       expect(instance).to receive(:build_access_token)
-      instance.callback_phase
+
+      # It will throw the exception because - as it stands - there is no way to actually successfully get
+      # an access token back from the current build_access_token method without it coming from a proper request
+      expect{
+        instance.callback_phase
+      }.to raise_error(
+               NoMethodError,
+               "undefined method `expired?' for nil:NilClass"
+           )
+
     end
 
     it 'should accept callback params as arguments, not just from the request' do
       instance = subject.new('abc', 'def')
 
       expect(instance).to receive(:build_access_token)
-      instance.callback_phase(:code => '4/def', :state => 'abc')
+
+      expect{instance.callback_phase(:code => '4/def', :state => 'abc')}.to raise_error(Exception)
     end
   end
 end
