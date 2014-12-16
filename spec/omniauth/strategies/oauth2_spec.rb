@@ -71,7 +71,7 @@ describe OmniAuth::Strategies::OAuth2 do
     it 'calls fail with the client error received' do
       instance = subject.new('abc', 'def')
       allow(instance).to receive(:request) do
-        double('Request', :params => {'error_reason' => 'user_denied', 'error' => 'access_denied'})
+        double('Request', :params => {'error_reason' => 'user_denied', 'error' => 'access_denied'}, :env => true)
       end
 
       expect(instance).to receive(:fail!).with('user_denied', anything)
@@ -92,11 +92,11 @@ describe OmniAuth::Strategies::OAuth2 do
                                         "
 
       instance = subject.new('abc', 'def')
+      instance.session = {'omniauth.state' => 'abc'} #fake session
       allow(instance).to receive(:request) do
-        double('Request', :params => {'code' => '4/def', 'state' => 'abc'})
+        double('Request', :params => {'code' => '4/def', 'state' => 'abc'}, :env => true)
       end
 
-      instance.session = {'omniauth.state' => 'abc'}
 
       expect(instance).to receive(:build_access_token)
 
@@ -113,6 +113,7 @@ describe OmniAuth::Strategies::OAuth2 do
 
     it 'should accept callback params as arguments, not just from the request' do
       instance = subject.new('abc', 'def')
+      instance.session = {'omniauth.state' => 'abc'} # fake session
 
       # If everything in this method is working then it will call 'build_access_token'.
       # Not the best way to test it, but it's a good starting point before I modify any code
@@ -132,11 +133,21 @@ describe OmniAuth::Strategies::OAuth2 do
 
     it 'should, given sane params, return an access token' do
       instance = subject.new('abc', 'def')
+      instance.session = {'omniauth.state' => 'abc'} # fake session
+
 
       expect(
           instance.callback_phase(:code => '4/def', :state => 'abc')
       ).to be_a AccessToken
 
+    end
+
+    it 'should, given sane params, return an access token' do
+      instance = subject.new('abc', 'def', :provider_ignores_state, true)
+
+      expect(
+          instance.callback_phase(:code => '4/def')
+      ).to be_a AccessToken
     end
 
   end

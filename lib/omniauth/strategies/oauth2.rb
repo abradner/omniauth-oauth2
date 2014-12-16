@@ -66,8 +66,9 @@ module OmniAuth
       end
 
       def callback_phase(request_options = {}) # rubocop:disable AbcSize, CyclomaticComplexity, MethodLength, PerceivedComplexity
-
-        unless request.nil? or request.params.blank?
+        unless request.nil? or
+            request.env.nil? or
+            request.params.nil?
           request_options = {
               :code => request.params['code'],
               :state => request.params['state'],
@@ -81,7 +82,9 @@ module OmniAuth
         error = request_options[:error_reason] || request_options[:error]
         if error
           fail!(error, CallbackError.new(request_options[:error], request_options[:error_description] || request_options[:error_reason], request_options[:error_uri]))
-        elsif !options.provider_ignores_state && (request_options[:state].to_s.empty? || request_options[:state] != session.delete('omniauth.state'))
+        elsif !options.provider_ignores_state &&
+            (request_options[:state].to_s.empty? ||
+                request_options[:state] != session.delete('omniauth.state'))
           fail!(:csrf_detected, CallbackError.new(:csrf_detected, 'CSRF detected'))
         else
           self.access_token = build_access_token request_options[:code]
